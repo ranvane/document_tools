@@ -1,7 +1,7 @@
 name: 构建跨平台可执行文件
 
 on:
-  workflow_dispatch:  # 改为手动触发
+  workflow_dispatch:  # 手动触发工作流
     inputs:
       reason:
         description: '构建原因'
@@ -15,12 +15,12 @@ jobs:
     strategy:
       matrix:
         os:
-          - ubuntu-latest
-          - macos-latest
           - windows-latest
+          - macos-latest
         script:
           - document_cropper.py
           - document_image_merger.py
+
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -31,36 +31,47 @@ jobs:
           python-version: '3.x'
 
       - name: 安装依赖
+        shell: bash
         run: |
-          pip install -r requirements.txt
+          echo "正在安装依赖包..."
+
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            pip install -r requirements.txt
+            pip install -i https://wxpython.org/Phoenix/snapshot-builds/ wxPython
+          elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            brew install wxpython
+            pip install -r requirements.txt
+          fi
+
           pip install pyinstaller
 
       - name: 使用 PyInstaller 构建可执行文件
+        shell: bash
         run: |
           echo "正在构建 ${{ matrix.script }}"
           pyinstaller --onefile "${{ matrix.script }}"
 
       - name: 重命名可执行文件
+        shell: bash
         run: |  
-          mkdir -p dist/executables  # 创建目标文件夹
+          mkdir -p dist/executables
           
-          # 提取脚本基础名称（如：document_cropper）
-          base_name=$(basename ${{ matrix.script }} .py)  
-          
-          # 判断平台并设置扩展名
+          base_name=$(basename "${{ matrix.script }}" .py)
+
+          # 设置扩展名
           case "${{ matrix.os }}" in
-            windows-latest) ext=".exe";;  # Windows 使用 .exe 扩展名
-            *) ext="";;  # 其他平台没有扩展名
+            windows-latest) ext=".exe";;
+            *) ext="";;
           esac
 
           # 构造目标文件名
           target_name="${base_name}_$(echo ${{ matrix.os }} | cut -d'-' -f1)${ext}"
-          
-          # 移动文件到目标文件夹并重命名
-          mv dist/$(basename ${{ matrix.script }} .py) dist/executables/$target_name
 
-      - name: 上传构建结果
-        uses: actions/upload-artifact@v4  # 更新到v4版本
+          # 移动文件
+          mv "dist/${base_name}${ext}" "dist/executables/${target_name}"
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
         with:
-          name: executables-${{ matrix.os }}  # 使用平台名作为上传包的名称
-          path: dist/executables/  # 上传文件夹
+          name: executables-${{ matrix.os }}
+          path: dist/executables/
