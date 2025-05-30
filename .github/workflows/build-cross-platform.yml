@@ -1,0 +1,65 @@
+name: Build Cross-Platform Executables
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types:
+      - published
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+        script:
+          - document_cropper.py
+          - document_image_merger.py
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install PyInstaller and Pillow
+        run: |
+          pip install pyinstaller pillow
+
+      - name: Build Executable with PyInstaller
+        run: |
+          echo "Building ${{ matrix.script }}"
+          pyinstaller --onefile "${{ matrix.script }}"
+
+      - name: Rename Executable
+        run: |
+          mkdir -p dist/executables
+
+          # 提取脚本基础名称（如：document_cropper）
+          base_name=$(basename ${{ matrix.script }} .py)
+
+          # 判断平台并设置扩展名
+          case "${{ matrix.os }}" in
+            windows-latest) ext=".exe";;
+            *) ext="";;
+          esac
+
+          target_name="${base_name}_$(echo ${{ matrix.os }} | cut -d'-' -f1)${ext}"
+
+          mv dist/$(basename ${{ matrix.script }} .py) dist/executables/$target_name
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: executables-${{ matrix.os }}
+          path: dist/executables/
+
