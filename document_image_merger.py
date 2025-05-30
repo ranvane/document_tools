@@ -14,25 +14,49 @@ class ImageViewPanel(wx.Panel):
     def __init__(self, parent):
         super().__init__(parent)
         self.image_paths = []
-        self.thumbnail_size = (100, 100)
-        self.sizer = wx.WrapSizer()
-        self.SetSizer(self.sizer)
+
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
+
+        # 显示文件名列表
+        self.listbox = wx.ListBox(self, style=wx.LB_EXTENDED)
+        main_sizer.Add(self.listbox, 1, wx.EXPAND | wx.ALL, 5)
+
+        # 按钮区：清除全部 & 删除选中
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        clear_btn = wx.Button(self, label="清除全部")
+        clear_btn.Bind(wx.EVT_BUTTON, self.on_clear)
+        btn_sizer.Add(clear_btn)
+
+        delete_btn = wx.Button(self, label="删除选中")
+        delete_btn.Bind(wx.EVT_BUTTON, self.on_delete_selected)
+        btn_sizer.Add(delete_btn, flag=wx.LEFT, border=5)
+
+        main_sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
+
+        self.SetSizer(main_sizer)
+
+        # 支持拖拽添加图片文件
+        drop_target = DropTarget(self)
+        self.SetDropTarget(drop_target)
 
     def add_images(self, paths):
         for path in paths:
-            if path.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
+            if path.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')) and path not in self.image_paths:
                 self.image_paths.append(path)
-                img = wx.Image(path, wx.BITMAP_TYPE_ANY).Scale(*self.thumbnail_size)
-                bmp = wx.StaticBitmap(self, -1, wx.Bitmap(img))
-                self.sizer.Add(bmp, 0, wx.ALL, 5)
-        self.Layout()
+                self.listbox.Append(os.path.basename(path))
 
     def clear(self):
         self.image_paths.clear()
-        children = self.GetChildren()
-        for child in children:
-            child.Destroy()
-        self.sizer.Clear()
+        self.listbox.Clear()
+
+    def on_clear(self, event):
+        self.clear()
+
+    def on_delete_selected(self, event):
+        selections = self.listbox.GetSelections()
+        for index in reversed(selections):  # 从后往前删，避免索引错乱
+            del self.image_paths[index]
+            self.listbox.Delete(index)
 
 class PreviewPanel(wx.ScrolledWindow):
     def __init__(self, parent):
@@ -93,8 +117,6 @@ class MainFrame(wx.Frame):
         left_sizer = wx.BoxSizer(wx.VERTICAL)
         self.image_panel = ImageViewPanel(left_panel)
         self.image_panel.SetBackgroundColour("light gray")
-        drop_target = DropTarget(self.image_panel)
-        self.image_panel.SetDropTarget(drop_target)
 
         file_btn = wx.Button(left_panel, label="选择图片")
         file_btn.Bind(wx.EVT_BUTTON, self.on_choose_files)
@@ -112,7 +134,6 @@ class MainFrame(wx.Frame):
         self.on_preset_change(None)
         self.preset_choice.Bind(wx.EVT_CHOICE, self.on_preset_change)
 
-        # 添加图片间距设置
         gap_sizer = wx.BoxSizer(wx.HORIZONTAL)
         gap_sizer.Add(wx.StaticText(left_panel, label="图片间距："), flag=wx.ALIGN_CENTER_VERTICAL)
         self.gap_input = wx.TextCtrl(left_panel, value="25")  # 默认25mm
@@ -126,11 +147,10 @@ class MainFrame(wx.Frame):
 
         save_btn = wx.Button(left_panel, label="另存为图片")
         save_btn.Bind(wx.EVT_BUTTON, self.on_save)
-        
+
         button_sizer = wx.BoxSizer(wx.HORIZONTAL)
         button_sizer.Add(merge_btn, flag=wx.ALL, border=5)
         button_sizer.Add(save_btn, flag=wx.ALL, border=5)
-        
 
         left_sizer.Add(file_btn, flag=wx.ALL, border=5)
         left_sizer.Add(self.image_panel, proportion=1, flag=wx.EXPAND | wx.ALL, border=10)
@@ -205,9 +225,22 @@ class MainFrame(wx.Frame):
 
         for path in self.image_panel.image_paths:
             with Image.open(path) as img:
-                ratio = target_width_px / img.width
-                new_size = (target_width_px, int(img.height * ratio))
-                resized_img = img.resize(new_size, Image.LANCZOS)
+                # 计算缩放比例和新尺寸
+                index = self.preset_choice.GetSelection()
+                if index == 0:  # 户口本模式
+                    target_height_px = mm_to_pixel(148/2)  # 户口本标准高度148mm,这里使用单页 模式
+                    ratio = target_height_px / img.height
+                    new_size = (int(img.width * ratio), target_height_px)
+                    resized_img = img.resize(new_size, Image.LANCZOS)
+                elif index == 1:  # 身份证模式
+                    target_height_px = mm_to_pixel(54)  # 身份证标准高度54mm
+                    ratio = target_height_px / img.height
+                    new_size = (int(img.width * ratio), target_height_px)
+                    resized_img = img.resize(new_size, Image.LANCZOS)
+                else:  # 自定义模式
+                    ratio = target_width_px / img.width
+                    new_size = (target_width_px, int(img.height * ratio))
+                    resized_img = img.resize(new_size, Image.LANCZOS)
 
                 if draw_y + resized_img.height > A4_SIZE_PX[1]:
                     y_offset = (A4_SIZE_PX[1] - draw_y + gap_height) // 2
@@ -253,7 +286,7 @@ class MainFrame(wx.Frame):
                 format_type = "PNG"
 
             self.merged_pages[0].save(save_path, format=format_type)
-            wx.MessageBox(f"文件已保存为：{save_path}", "完成", wx.OK | wx.ICON_INFORMATION)
+            wx.MessageBox(f"保存成功：{save_path}", "提示", wx.OK | wx.ICON_INFORMATION)
         dialog.Destroy()
 
 if __name__ == "__main__":

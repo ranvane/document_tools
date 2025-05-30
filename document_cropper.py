@@ -2,6 +2,8 @@ import os
 import cv2
 import wx
 import numpy as np
+from loguru import logger
+from utils import transform_document,four_point_transform,detect_contour,draw_boxes_on_image,find_document_contour,detect_edges,preprocess_image
 
 class MyFileDropTarget(wx.FileDropTarget):
     def __init__(self, callback):
@@ -99,10 +101,21 @@ class IDCardCropApp(wx.Frame):
 
     def detect_and_show_crops(self):
         image = self.orig_image.copy()
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        # gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        # edged = cv2.Canny(blurred, 50, 150)
+        # 1. 图像预处理
+        _, blurred = preprocess_image(image)
+        if blurred is None:
+            logger.error("图像预处理失败，无法进行后续操作")
+            wx.MessageBox("图像预处理失败。", "错误", wx.OK | wx.ICON_ERROR)
+            return None
+
+        # 2. 边缘检测
+
         edged = cv2.Canny(blurred, 50, 150)
 
+        # 3. 轮廓检测与筛选
         contours, _ = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         self.crops = []
 
@@ -112,7 +125,9 @@ class IDCardCropApp(wx.Frame):
                 x, y, w, h = cv2.boundingRect(cnt)
                 self.crops.append((x, y, w, h))
 
+
         if self.crops:
+            print(self.crops)
             self.selected_crop_idx = 0
             self.show_crop()
             if len(self.crops) > 1:
