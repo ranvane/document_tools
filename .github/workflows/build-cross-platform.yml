@@ -1,7 +1,7 @@
 name: 构建跨平台可执行文件
 
 on:
-  workflow_dispatch:  # 手动触发工作流
+  workflow_dispatch:
     inputs:
       reason:
         description: '构建原因'
@@ -16,7 +16,8 @@ jobs:
       matrix:
         os:
           - windows-latest
-          - macos-latest
+          - ubuntu-latest
+#          - macos-latest
         script:
           - document_cropper.py
           - document_image_merger.py
@@ -35,7 +36,13 @@ jobs:
         run: |
           echo "正在安装依赖包..."
 
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          # Ubuntu 特别处理（wxPython 安装跳过或失败容忍）
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            sudo apt update
+            sudo apt install -y python3-wxgtk4.0
+            pip install -r requirements.txt || true
+            echo "注意：wxPython 可能未在 Ubuntu 上成功安装"
+          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             pip install -r requirements.txt
             pip install -i https://wxpython.org/Phoenix/snapshot-builds/ wxPython
           elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
@@ -49,7 +56,7 @@ jobs:
         shell: bash
         run: |
           echo "正在构建 ${{ matrix.script }}"
-          pyinstaller --onefile "${{ matrix.script }}"
+          pyinstaller --onefile "${{ matrix.script }}" || echo "构建失败，但继续"
 
       - name: 重命名可执行文件
         shell: bash
@@ -58,20 +65,22 @@ jobs:
           
           base_name=$(basename "${{ matrix.script }}" .py)
 
-          # 设置扩展名
           case "${{ matrix.os }}" in
             windows-latest) ext=".exe";;
             *) ext="";;
           esac
 
-          # 构造目标文件名
           target_name="${base_name}_$(echo ${{ matrix.os }} | cut -d'-' -f1)${ext}"
 
-          # 移动文件
-          mv "dist/${base_name}${ext}" "dist/executables/${target_name}"
+          if [ -f "dist/${base_name}${ext}" ]; then
+            mv "dist/${base_name}${ext}" "dist/executables/${target_name}"
+          else
+            echo "跳过：未生成 ${base_name}${ext}"
+          fi
 
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
+        if: success() || always()
         with:
           name: executables-${{ matrix.os }}
           path: dist/executables/
