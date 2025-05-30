@@ -1,7 +1,7 @@
 import os
 import cv2
 import wx
-
+import numpy as np
 
 class MyFileDropTarget(wx.FileDropTarget):
     def __init__(self, callback):
@@ -78,12 +78,22 @@ class IDCardCropApp(wx.Frame):
             self.load_image(path)
 
     def load_image(self, path):
-        self.image_path = path
-        self.orig_image = cv2.imread(path)
+        """加载并显示图像文件"""
+        self.image_path = path  # 保存图像路径
+        try:
+            # 使用numpy的fromfile配合imdecode解决中文路径问题
+            img_array = np.fromfile(path, dtype=np.uint8)
+            self.orig_image = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+        except Exception as e:
+            wx.MessageBox(f"无法加载图像: {str(e)}", "错误", wx.OK | wx.ICON_ERROR)
+            return
         if self.orig_image is None:
+            # 图像加载失败时显示错误提示
             wx.MessageBox("无法加载图像。请确认文件格式正确。", "错误", wx.OK | wx.ICON_ERROR)
             return
+        # 检测并显示图像中的裁剪区域
         self.detect_and_show_crops()
+        # 启用裁剪和另存为按钮
         self.crop_btn.Enable()
         self.saveas_btn.Enable()
 
@@ -144,8 +154,6 @@ class IDCardCropApp(wx.Frame):
         cv2.imwrite(self.image_path, cropped)
         wx.MessageBox("裁剪区域已保存并覆盖原图。", "保存成功", wx.OK | wx.ICON_INFORMATION)
 
-        # ... existing code ...
-
     def on_save_as(self, event):
         # Check if there are detected crop areas
         if not self.crops:
@@ -180,8 +188,6 @@ class IDCardCropApp(wx.Frame):
             else:
                 # If the save fails, show a message box indicating the failure
                 wx.MessageBox("保存失败。", "错误", wx.OK | wx.ICON_ERROR)
-
-    # ... existing code ...
 
 
 if __name__ == "__main__":

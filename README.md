@@ -33,7 +33,14 @@ pip install -r requirements.txt
 2.  `document_image_merger.py`将裁剪后的图像重新合并到A4纸上。
 
 
+## 打包
+使用PyInstaller打包为可执行文件:
+```bash
+pip install pyinstaller
 
+pyinstaller -F -w  --onefile document_cropper.py
+pyinstaller -F -w  --onefile document_image_merger.py
+```
 
 
 ## 版本信息
