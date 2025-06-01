@@ -122,7 +122,7 @@ class MainFrame(wx.Frame):
         file_btn.Bind(wx.EVT_BUTTON, self.on_choose_files)
 
         preset_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.preset_choice = wx.Choice(left_panel, choices=["户口本 (105mm)", "身份证 (85.6mm)", "自定义"])
+        self.preset_choice = wx.Choice(left_panel, choices=["户口本 (105mm)", "身份证 (85.6mm)","学生证 (120mm)", "自定义"])
         self.width_input = wx.TextCtrl(left_panel, value="100")
         self.unit_choice = wx.Choice(left_panel, choices=["mm", "pixel"])
         preset_sizer.Add(wx.StaticText(left_panel, label="目标宽度："), flag=wx.ALIGN_CENTER)
@@ -136,7 +136,7 @@ class MainFrame(wx.Frame):
 
         gap_sizer = wx.BoxSizer(wx.HORIZONTAL)
         gap_sizer.Add(wx.StaticText(left_panel, label="图片间距："), flag=wx.ALIGN_CENTER_VERTICAL)
-        self.gap_input = wx.TextCtrl(left_panel, value="25")  # 默认25mm
+        self.gap_input = wx.TextCtrl(left_panel, value="15")  # 默认15mm
         self.gap_unit_choice = wx.Choice(left_panel, choices=["mm", "pixel"])
         self.gap_unit_choice.SetSelection(0)
         gap_sizer.Add(self.gap_input, flag=wx.LEFT | wx.RIGHT, border=5)
@@ -191,6 +191,11 @@ class MainFrame(wx.Frame):
             self.unit_choice.SetSelection(0)
             self.width_input.Enable(False)
             self.unit_choice.Enable(False)
+        elif index == 2:
+            self.width_input.SetValue("120")
+            self.unit_choice.SetSelection(0)
+            self.width_input.Enable(False)
+            self.unit_choice.Enable(False)
         else:
             self.width_input.Enable(True)
             self.unit_choice.Enable(True)
@@ -237,6 +242,11 @@ class MainFrame(wx.Frame):
                     ratio = target_height_px / img.height
                     new_size = (int(img.width * ratio), target_height_px)
                     resized_img = img.resize(new_size, Image.LANCZOS)
+                elif index == 2:  # 学生证模式
+                    target_height_px = mm_to_pixel(90)  # 学生证标准高度90mm
+                    ratio = target_height_px / img.height
+                    new_size = (int(img.width * ratio), target_height_px)
+                    resized_img = img.resize(new_size, Image.LANCZOS)
                 else:  # 自定义模式
                     ratio = target_width_px / img.width
                     new_size = (target_width_px, int(img.height * ratio))
@@ -273,21 +283,32 @@ class MainFrame(wx.Frame):
             wx.MessageBox("没有可保存的合并内容，请先进行合并。", "提示", wx.OK | wx.ICON_INFORMATION)
             return
 
-        dialog = wx.FileDialog(self, "另存为", wildcard="PNG 文件 (*.png)|*.png|JPG 文件 (*.jpg)|*.jpg",
-                                style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+        # 获取第一个图片文件的目录作为默认保存路径
+        default_path = ""
+        if self.image_panel.image_paths:
+            default_path = os.path.dirname(self.image_panel.image_paths[0])
+
+        dialog = wx.FileDialog(
+            self,
+            "另存为",
+            defaultDir=default_path,  # 设置默认目录
+            wildcard="JPG 文件 (*.jpg)|*.jpg|PNG 文件 (*.png)|*.png",
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT
+        )
         if dialog.ShowModal() == wx.ID_OK:
             path = dialog.GetPath()
             ext = os.path.splitext(path)[1].lower()
-            if ext in ['.png', '.jpg', '.jpeg']:
+            if ext in ['.jpg', '.png', '.jpeg']:
                 save_path = path
-                format_type = "PNG" if ext == ".png" else "JPEG"
+                format_type = "JPEG" if ext in ('.jpg', '.jpeg') else "PNG"
             else:
-                save_path = path + ".png"
-                format_type = "PNG"
+                save_path = path + ".jpg"  # 默认改为jpg扩展名
+                format_type = "JPEG"
 
             self.merged_pages[0].save(save_path, format=format_type)
             wx.MessageBox(f"保存成功：{save_path}", "提示", wx.OK | wx.ICON_INFORMATION)
         dialog.Destroy()
+
 
 if __name__ == "__main__":
     app = wx.App()
