@@ -1,0 +1,15 @@
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆角矩形 -->
+  <rect x="0" y="0" width="256" height="256" rx="20" ry="20" fill="#e0f0ff"/>
+
+  <!-- A4 页面区域 -->
+  <rect x="40" y="40" width="176" height="176" rx="10" ry="10" fill="#ffffff" stroke="#303080" stroke-width="3"/>
+
+  <!-- 排列的三张图片 -->
+  <rect x="55" y="60" width="50" height="40" rx="5" ry="5" fill="#c0e0ff" stroke="#303080" stroke-width="1"/>
+  <rect x="115" y="60" width="50" height="40" rx="5" ry="5" fill="#c0e0ff" stroke="#303080" stroke-width="1"/>
+  <rect x="85" y="115" width="50" height="40" rx="5" ry="5" fill="#c0e0ff" stroke="#303080" stroke-width="1"/>
+
+  <!-- 页面中心线（模拟分页或边距） -->
+  <line x1="40" y1="130" x2="216" y2="130" stroke="#d0d0d0" stroke-width="1" stroke-dasharray="4,4"/>
+</svg>

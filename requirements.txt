@@ -3,3 +3,5 @@ opencv-python>=4.5.0  # 图像处理
 numpy>=1.20.0  # 数值计算
 Pillow>=9.0.0  # 图像处理
 loguru         # 日志记录
+python-docx
+

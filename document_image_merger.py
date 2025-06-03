@@ -1,7 +1,7 @@
 import wx
 import os
 from PIL import Image
-
+from loguru import logger
 DPI = 300
 
 def mm_to_pixel(mm):
@@ -10,11 +10,19 @@ def mm_to_pixel(mm):
 A4_SIZE_MM = (210, 297)
 A4_SIZE_PX = (mm_to_pixel(A4_SIZE_MM[0]), mm_to_pixel(A4_SIZE_MM[1]))
 
+# 预设证件尺寸（单位：毫米）适当加大
+ID_CARD_SIZE_MM = (86, 54)     # 身份证（85.6毫米 ×54毫米）
+HUKOU_SIZE_MM = (145, 106)        # 户口本（143 毫米 ×105 毫米）
+STUDENT_CARD_SIZE_MM = (120, 90)  # 学生证
+# 预先转换成像素
+ID_CARD_SIZE_PX = (mm_to_pixel(ID_CARD_SIZE_MM[0]), mm_to_pixel(ID_CARD_SIZE_MM[1]))
+HUKOU_SIZE_PX = (mm_to_pixel(HUKOU_SIZE_MM[0]), mm_to_pixel(HUKOU_SIZE_MM[1]))
+STUDENT_CARD_SIZE_PX = (mm_to_pixel(STUDENT_CARD_SIZE_MM[0]), mm_to_pixel(STUDENT_CARD_SIZE_MM[1]))
+
 class ImageViewPanel(wx.Panel):
     def __init__(self, parent):
         super().__init__(parent)
         self.image_paths = []
-
         main_sizer = wx.BoxSizer(wx.VERTICAL)
 
         # 显示文件名列表
@@ -106,7 +114,15 @@ class DropTarget(wx.FileDropTarget):
 
 class MainFrame(wx.Frame):
     def __init__(self):
-        super().__init__(None, title="证件图片合并器 - 带预览", size=(1200, 800))
+        super().__init__(None, title="证件图片合并器", size=(1200, 800))
+        # 加载图标
+        try:
+            icon_path = os.path.join(os.path.dirname(__file__), "document_merger_icon.ico")
+            if os.path.exists(icon_path):
+                icon = wx.Icon(icon_path, wx.BITMAP_TYPE_ICO)
+                self.SetIcon(icon)
+        except Exception as e:
+            logger.error(f"Failed to load icon: {e}")
         self.Center()
         panel = wx.Panel(self)
         main_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -122,7 +138,7 @@ class MainFrame(wx.Frame):
         file_btn.Bind(wx.EVT_BUTTON, self.on_choose_files)
 
         preset_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.preset_choice = wx.Choice(left_panel, choices=["户口本 (140mm)", "身份证 (85.6mm)","学生证 (120mm)", "自定义"])
+        self.preset_choice = wx.Choice(left_panel, choices=["户口本 (148mm)", "身份证 (85.6mm)","学生证 (120mm)", "自定义"])
         self.width_input = wx.TextCtrl(left_panel, value="100")
         self.unit_choice = wx.Choice(left_panel, choices=["mm", "pixel"])
         preset_sizer.Add(wx.StaticText(left_panel, label="目标宽度："), flag=wx.ALIGN_CENTER)
@@ -201,57 +217,69 @@ class MainFrame(wx.Frame):
             self.unit_choice.Enable(True)
 
     def on_merge(self, event):
+        """
+        处理图片合并事件。
+
+        此函数负责将用户选择的多张图片按照指定的宽度和间距合并成一页或多页A4大小的图片。
+        合并后的图片显示在预览面板，用户可以选择保存。
+
+        参数:
+        - event: 触发的事件对象，通常由界面操作产生。
+
+        返回值:
+        无
+        """
+        # 检查是否有图片需要合并
         if not self.image_panel.image_paths:
             wx.MessageBox("请先拖入或选择图片！", "提示", wx.OK | wx.ICON_INFORMATION)
             return
 
+        # 获取目标宽度并进行有效性检查
         try:
             target_width = float(self.width_input.GetValue())
         except ValueError:
             wx.MessageBox("请输入有效的宽度数值。", "错误", wx.OK | wx.ICON_ERROR)
             return
 
+        # 根据用户选择的单位处理目标宽度
         unit = 'mm' if self.unit_choice.GetSelection() == 0 else 'px'
         target_width_px = mm_to_pixel(target_width) if unit == 'mm' else int(target_width)
 
+        # 获取图片间距并进行有效性检查
         try:
             gap_value = float(self.gap_input.GetValue())
         except ValueError:
             wx.MessageBox("请输入有效的图片间距数值。", "错误", wx.OK | wx.ICON_ERROR)
             return
 
+        # 根据用户选择的单位处理图片间距
         gap_unit = 'mm' if self.gap_unit_choice.GetSelection() == 0 else 'px'
         gap_height = mm_to_pixel(gap_value) if gap_unit == 'mm' else int(gap_value)
 
+        # 初始化页面和当前绘制位置
         pages = []
         current_page = Image.new('RGB', A4_SIZE_PX, color='white')
         draw_y = 0
         items = []
 
+        # 遍历所有图片并根据用户选择的模式进行处理
         for path in self.image_panel.image_paths:
             with Image.open(path) as img:
                 # 计算缩放比例和新尺寸
-                index = self.preset_choice.GetSelection()
+                index = self.preset_choice.GetSelection()#获取用户选择的预设模式
                 if index == 0:  # 户口本模式
-                    target_height_px = mm_to_pixel(108)  # 户口本标准高度108mm,这里使用单页 模式
-                    ratio = target_height_px / img.height
-                    new_size = (int(img.width * ratio), target_height_px)
-                    resized_img = img.resize(new_size, Image.LANCZOS)
+                    target_size = HUKOU_SIZE_PX
                 elif index == 1:  # 身份证模式
-                    target_height_px = mm_to_pixel(54)  # 身份证标准高度54mm
-                    ratio = target_height_px / img.height
-                    new_size = (int(img.width * ratio), target_height_px)
-                    resized_img = img.resize(new_size, Image.LANCZOS)
+                    target_size = ID_CARD_SIZE_PX
                 elif index == 2:  # 学生证模式
-                    target_height_px = mm_to_pixel(90)  # 学生证标准高度90mm
-                    ratio = target_height_px / img.height
-                    new_size = (int(img.width * ratio), target_height_px)
-                    resized_img = img.resize(new_size, Image.LANCZOS)
+                    target_size = STUDENT_CARD_SIZE_PX
                 else:  # 自定义模式
                     ratio = target_width_px / img.width
-                    new_size = (target_width_px, int(img.height * ratio))
-                    resized_img = img.resize(new_size, Image.LANCZOS)
+                    target_size = (target_width_px, int(img.height * ratio))
 
+                resized_img = img.resize(target_size, Image.LANCZOS)# 缩放图片，并使用LANCZOS算法进行平滑插值
+
+                # 检查当前页面是否需要翻页
                 if draw_y + resized_img.height > A4_SIZE_PX[1]:
                     y_offset = (A4_SIZE_PX[1] - draw_y + gap_height) // 2
                     for img_obj, h in items:
@@ -263,9 +291,11 @@ class MainFrame(wx.Frame):
                     draw_y = 0
                     items.clear()
 
+                # 将调整后的图片添加到当前页面的绘制列表中
                 items.append((resized_img, resized_img.height))
                 draw_y += resized_img.height + gap_height
 
+        # 处理最后一页的绘制
         if items:
             y_offset = (A4_SIZE_PX[1] - draw_y + gap_height) // 2
             for img_obj, h in items:
@@ -274,6 +304,7 @@ class MainFrame(wx.Frame):
                 y_offset += h + gap_height
             pages.append(current_page)
 
+        # 显示合并后的预览并保存结果
         self.preview_panel.show_preview(pages)
         self.merged_pages = pages
         # wx.MessageBox("合并完成，请点击【另存为图片】保存文件。", "提示", wx.OK | wx.ICON_INFORMATION)

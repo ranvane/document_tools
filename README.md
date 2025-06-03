@@ -38,8 +38,9 @@ pip install -r requirements.txt
 ```bash
 pip install pyinstaller
 
-pyinstaller -F -w  --onefile document_cropper.py
-pyinstaller -F -w  --onefile document_image_merger.py
+pyinstaller -F -w   document_cropper.py
+pyinstaller -F -w -i document_merger_icon.ico document_image_merger.py
+pyinstaller -F -w -i imageMergerDoc_icon.png imageMergerDoc.py
 ```
 
 
