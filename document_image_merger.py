@@ -122,7 +122,7 @@ class MainFrame(wx.Frame):
         file_btn.Bind(wx.EVT_BUTTON, self.on_choose_files)
 
         preset_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.preset_choice = wx.Choice(left_panel, choices=["户口本 (105mm)", "身份证 (85.6mm)","学生证 (120mm)", "自定义"])
+        self.preset_choice = wx.Choice(left_panel, choices=["户口本 (140mm)", "身份证 (85.6mm)","学生证 (120mm)", "自定义"])
         self.width_input = wx.TextCtrl(left_panel, value="100")
         self.unit_choice = wx.Choice(left_panel, choices=["mm", "pixel"])
         preset_sizer.Add(wx.StaticText(left_panel, label="目标宽度："), flag=wx.ALIGN_CENTER)
@@ -182,7 +182,7 @@ class MainFrame(wx.Frame):
     def on_preset_change(self, event):
         index = self.preset_choice.GetSelection()
         if index == 0:
-            self.width_input.SetValue("105")
+            self.width_input.SetValue("140")
             self.unit_choice.SetSelection(0)
             self.width_input.Enable(False)
             self.unit_choice.Enable(False)
@@ -233,7 +233,7 @@ class MainFrame(wx.Frame):
                 # 计算缩放比例和新尺寸
                 index = self.preset_choice.GetSelection()
                 if index == 0:  # 户口本模式
-                    target_height_px = mm_to_pixel(148/2)  # 户口本标准高度148mm,这里使用单页 模式
+                    target_height_px = mm_to_pixel(108)  # 户口本标准高度108mm,这里使用单页 模式
                     ratio = target_height_px / img.height
                     new_size = (int(img.width * ratio), target_height_px)
                     resized_img = img.resize(new_size, Image.LANCZOS)
