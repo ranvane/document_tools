@@ -40,7 +40,10 @@ pip install pyinstaller
 
 pyinstaller -F -w   document_cropper.py
 pyinstaller -F -w -i document_merger_icon.ico document_image_merger.py
-pyinstaller -F -w -i imageMergerDoc_icon.png imageMergerDoc.py
+pyinstaller -F -w -i imageMergerDoc_icon.ico imageMergerDoc.py
+
+#windows下打包, 执行会报错, 解决办法:
+pyinstaller -F -w -i imageMergerDoc_icon.ico --hidden-import=docx imageMergerDoc.py
 ```
 
 
