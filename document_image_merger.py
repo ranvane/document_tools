@@ -1,7 +1,10 @@
 import wx
 import os
-from PIL import Image
+from PIL import Image, ImageEnhance
 from loguru import logger
+import cv2
+import numpy as np
+
 DPI = 300
 
 def mm_to_pixel(mm):
@@ -146,6 +149,10 @@ class MainFrame(wx.Frame):
         preset_sizer.Add(self.width_input, flag=wx.LEFT | wx.RIGHT, border=5)
         preset_sizer.Add(self.unit_choice)
 
+        # 添加漂白复选框
+        self.bleach_checkbox = wx.CheckBox(left_panel, label="漂白图片")
+        preset_sizer.Add(self.bleach_checkbox, flag=wx.LEFT, border=10)
+
         self.preset_choice.SetSelection(1)
         self.on_preset_change(None)
         self.preset_choice.Bind(wx.EVT_CHOICE, self.on_preset_change)
@@ -202,19 +209,36 @@ class MainFrame(wx.Frame):
             self.unit_choice.SetSelection(0)
             self.width_input.Enable(False)
             self.unit_choice.Enable(False)
-        elif index == 1:
-            self.width_input.SetValue("85.6")
-            self.unit_choice.SetSelection(0)
-            self.width_input.Enable(False)
-            self.unit_choice.Enable(False)
-        elif index == 2:
-            self.width_input.SetValue("120")
-            self.unit_choice.SetSelection(0)
-            self.width_input.Enable(False)
-            self.unit_choice.Enable(False)
+            # 选择户口本时自动选中漂白复选框
+            self.bleach_checkbox.SetValue(True)
         else:
             self.width_input.Enable(True)
             self.unit_choice.Enable(True)
+            # 其他情况默认不选中
+            self.bleach_checkbox.SetValue(False)
+
+    def bleach_image(self, img):
+        """
+        使用 OpenCV 对图片进行自动调整对比度和二值化处理。
+
+        参数:
+        - img: PIL.Image 对象，需要处理的图片。
+
+        返回值:
+        - PIL.Image 对象，处理后的图片。
+        """
+        # 将 PIL 图像转换为 OpenCV 图像
+        img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        # 转换为灰度图像
+        gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+        # 使用 CLAHE 自动调整对比度
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        enhanced_gray = clahe.apply(gray)
+        # 二值化处理
+        _, binary = cv2.threshold(enhanced_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        # 将 OpenCV 图像转换回 PIL 图像
+        processed_img = Image.fromarray(enhanced_gray).convert("RGB")
+        return processed_img
 
     def on_merge(self, event):
         """
@@ -278,6 +302,10 @@ class MainFrame(wx.Frame):
                     target_size = (target_width_px, int(img.height * ratio))
 
                 resized_img = img.resize(target_size, Image.LANCZOS)# 缩放图片，并使用LANCZOS算法进行平滑插值
+
+                # 根据复选框状态进行漂白处理
+                if self.bleach_checkbox.GetValue():
+                    resized_img = self.bleach_image(resized_img)
 
                 # 检查当前页面是否需要翻页
                 if draw_y + resized_img.height > A4_SIZE_PX[1]:
