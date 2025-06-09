@@ -3,7 +3,7 @@ import cv2
 import wx
 import numpy as np
 from loguru import logger
-from utils import transform_document,four_point_transform,detect_contour,draw_boxes_on_image,find_document_contour,detect_edges,preprocess_image
+from utils import SCRFD,preprocess_image
 
 class MyFileDropTarget(wx.FileDropTarget):
     def __init__(self, callback):
@@ -26,6 +26,12 @@ class IDCardCropApp(wx.Frame):
         self.saveas_btn = wx.Button(self.panel, label="另存为...")
         self.prev_btn = wx.Button(self.panel, label="上一张")
         self.next_btn = wx.Button(self.panel, label="下一张")
+        
+        # 定义 ONNX 模型文件的路径
+        onnxmodel = 'models/carddetection_scrfd34gkps.onnx'
+        # 加载 ONNX 模型
+        # 创建 SCRFD 类的实例，传入 ONNX 模型路径、置信度阈值和 NMS 阈值
+        self.card_net = SCRFD(onnxmodel)
 
         self.orig_image = None
         self.image_path = None
@@ -62,6 +68,8 @@ class IDCardCropApp(wx.Frame):
 
         self.Centre()
         self.Show()
+        
+        
 
     def on_drop_files(self, paths):
         if isinstance(paths, list):
@@ -111,19 +119,40 @@ class IDCardCropApp(wx.Frame):
             wx.MessageBox("图像预处理失败。", "错误", wx.OK | wx.ICON_ERROR)
             return None
 
-        # 2. 边缘检测
+        # # 2. 边缘检测
 
-        edged = cv2.Canny(blurred, 50, 150)
+        # edged = cv2.Canny(blurred, 50, 150)
 
-        # 3. 轮廓检测与筛选
-        contours, _ = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # # 3. 轮廓检测与筛选
+        # contours, _ = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # self.crops = []
+
+        # for cnt in contours:
+        #     approx = cv2.approxPolyDP(cnt, 0.02 * cv2.arcLength(cnt, True), True)
+        #     if len(approx) == 4 and cv2.contourArea(cnt) > 5000:
+        #         x, y, w, h = cv2.boundingRect(cnt)
+        #         self.crops.append((x, y, w, h))
+        
+        # 调用 SCRFD 实例的 detect 方法对读取的图像进行目标检测
+        outimg, corner_points_list = self.card_net.detect(image)
         self.crops = []
+        # 遍历检测到的目标的四个角点坐标
+        print(f"图像 {self.image_path} 的检测到{len(corner_points_list)}个目标,四个角点坐标分别为: {corner_points_list}")
+        for corner_points in corner_points_list:
+            # 提取 xmin, ymin, xmax, ymax
+            xmin = min([point[0] for point in corner_points])
+            ymin = min([point[1] for point in corner_points])
+            xmax = max([point[0] for point in corner_points])
+            ymax = max([point[1] for point in corner_points])
 
-        for cnt in contours:
-            approx = cv2.approxPolyDP(cnt, 0.02 * cv2.arcLength(cnt, True), True)
-            if len(approx) == 4 and cv2.contourArea(cnt) > 5000:
-                x, y, w, h = cv2.boundingRect(cnt)
-                self.crops.append((x, y, w, h))
+            # 计算宽度和高度
+            w = xmax - xmin
+            h = ymax - ymin
+
+            # 将 (x, y, w, h) 添加到 self.crops
+            self.crops.append((xmin, ymin, w, h))
+
+            print(f"图像 {self.image_path} 的检测目标四个角点坐标: {corner_points}")
 
 
         if self.crops:

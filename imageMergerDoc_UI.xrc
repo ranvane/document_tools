@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<resource xmlns="http://www.wxwidgets.org/wxxrc" version="2.5.3.0">
+  <object class="wxFrame" name="Main_Ui_Frame">
+    <size>1000,800</size>
+    <style>wxDEFAULT_FRAME_STYLE|wxTAB_TRAVERSAL</style>
+    <title>图片生成 Word 文档</title>
+    <centered>1</centered>
+    <aui_managed>0</aui_managed>
+    <object class="wxPanel" name="MainPanel">
+      <style>wxTAB_TRAVERSAL</style>
+      <object class="wxBoxSizer" name="panel_sizer">
+        <orient>wxHORIZONTAL</orient>
+        <object class="sizeritem">
+          <flag>wxEXPAND</flag>
+          <border>0</border>
+          <option>1</option>
+          <object class="wxPanel" name="LeftPanel">
+            <style>wxTAB_TRAVERSAL</style>
+            <object class="wxBoxSizer" name="left_sizer">
+              <orient>wxVERTICAL</orient>
+              <object class="sizeritem">
+                <flag>wxALL</flag>
+                <border>5</border>
+                <option>0</option>
+                <object class="wxStaticText" name="InstructionText">
+                  <label>拖入图片或点击按钮选择图片：</label>
+                  <wrap>0</wrap>
+                </object>
+              </object>
+              <object class="sizeritem">
+                <flag>wxEXPAND|wxALL</flag>
+                <border>5</border>
+                <option>1</option>
+                <object class="wxListBox" name="m_ImageListBox">
+                  <style>wxLB_EXTENDED</style>
+                  <content/>
+                </object>
+              </object>
+              <object class="sizeritem">
+                <flag>wxALIGN_CENTER|wxALL</flag>
+                <border>10</border>
+                <option>0</option>
+                <object class="wxBoxSizer" name="left_btn_sizer">
+                  <orient>wxHORIZONTAL</orient>
+                  <object class="sizeritem">
+                    <flag>wxRIGHT</flag>
+                    <border>5</border>
+                    <option>0</option>
+                    <object class="wxButton" name="AddButton">
+                      <label>选择图片</label>
+                      <default>0</default>
+                      <auth_needed>0</auth_needed>
+                      <markup>0</markup>
+                      <bitmap/>
+                    </object>
+                  </object>
+                  <object class="sizeritem">
+                    <flag>wxRIGHT</flag>
+                    <border>5</border>
+                    <option>0</option>
+                    <object class="wxButton" name="DeleteButton">
+                      <label>删除选定</label>
+                      <default>0</default>
+                      <auth_needed>0</auth_needed>
+                      <markup>0</markup>
+                      <bitmap/>
+                    </object>
+                  </object>
+                  <object class="sizeritem">
+                    <flag>wxRIGHT</flag>
+                    <border>5</border>
+                    <option>0</option>
+                    <object class="wxButton" name="ClearButton">
+                      <label>删除全部</label>
+                      <default>0</default>
+                      <auth_needed>0</auth_needed>
+                      <markup>0</markup>
+                      <bitmap/>
+                    </object>
+                  </object>
+                  <object class="sizeritem">
+                    <flag></flag>
+                    <border>0</border>
+                    <option>0</option>
+                    <object class="wxButton" name="GenerateButton">
+                      <label>生成 Word</label>
+                      <default>0</default>
+                      <auth_needed>0</auth_needed>
+                      <markup>0</markup>
+                      <bitmap/>
+                    </object>
+                  </object>
+                </object>
+              </object>
+            </object>
+          </object>
+        </object>
+        <object class="sizeritem">
+          <flag>wxEXPAND</flag>
+          <border>0</border>
+          <option>1</option>
+          <object class="wxPanel" name="RightPanel">
+            <style>wxTAB_TRAVERSAL</style>
+            <object class="wxBoxSizer" name="right_sizer">
+              <orient>wxVERTICAL</orient>
+              <object class="sizeritem">
+                <flag>wxLEFT|wxTOP</flag>
+                <border>5</border>
+                <option>0</option>
+                <object class="wxStaticText" name="PreviewLabel">
+                  <label>图片预览：</label>
+                  <wrap>0</wrap>
+                </object>
+              </object>
+              <object class="sizeritem">
+                <flag>wxEXPAND|wxALL</flag>
+                <border>5</border>
+                <option>1</option>
+                <object class="wxStaticBitmap" name="PreviewBitmap">
+                  <size>400,400</size>
+                  <bitmap/>
+                </object>
+              </object>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>
+  </object>
+</resource>
