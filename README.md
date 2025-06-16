@@ -44,6 +44,8 @@ pyinstaller -F -w -i imageMergerDoc_icon.ico imageMergerDoc.py
 
 #windows下打包, 执行会报错, 解决办法:
 pyinstaller -F -w -i imageMergerDoc_icon.ico --hidden-import=docx imageMergerDoc.py
+
+pyinstaller -F -w  --add-data "models/carddetection_scrf.onnx;." document_cropper.py
 ```
 
 

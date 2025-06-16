@@ -4,6 +4,37 @@ import wx
 import numpy as np
 from loguru import logger
 from utils import SCRFD,preprocess_image
+import sys
+ 
+def get_model_path():
+    if hasattr(sys, '_MEIPASS'):
+        # 如果程序是打包后的状态
+        return os.path.join(sys._MEIPASS, os.path.join('models', 'carddetection_scrf.onnx'))
+    else:
+        # 如果是开发状态
+        return os.path.join('models', 'carddetection_scrf.onnx')
+
+# 提取保存图像的逻辑为独立函数
+def save_image_with_chinese_path(image_path, cropped):
+    success = False
+    try:
+        # 获取文件扩展名
+        file_extension = os.path.splitext(image_path)[1].lower()
+        if file_extension == '.jpg':
+            _, buffer = cv2.imencode('.jpg', cropped)
+        elif file_extension == '.png':
+            _, buffer = cv2.imencode('.png', cropped)
+        else:
+            wx.MessageBox("不支持的文件格式，仅支持 .jpg 和 .png。", "错误", wx.OK | wx.ICON_ERROR)
+            return success
+
+        # 将编码后的字节流写入文件
+        with open(image_path, 'wb') as f:
+            f.write(buffer)
+        success = True
+    except Exception as e:
+        logger.error(f"保存失败: {str(e)}")
+    return success
 
 class MyFileDropTarget(wx.FileDropTarget):
     def __init__(self, callback):
@@ -28,7 +59,7 @@ class IDCardCropApp(wx.Frame):
         self.next_btn = wx.Button(self.panel, label="下一张")
         
         # 定义 ONNX 模型文件的路径
-        onnxmodel = 'models/carddetection_scrfd34gkps.onnx'
+        onnxmodel = get_model_path()
         # 加载 ONNX 模型
         # 创建 SCRFD 类的实例，传入 ONNX 模型路径、置信度阈值和 NMS 阈值
         self.card_net = SCRFD(onnxmodel)
@@ -191,12 +222,44 @@ class IDCardCropApp(wx.Frame):
             self.show_crop()
 
     def on_save_crop(self, event):
-        if not self.crops:
-            return
-        x, y, w, h = self.crops[self.selected_crop_idx]
-        cropped = self.orig_image[y:y + h, x:x + w]
-        cv2.imwrite(self.image_path, cropped)
-        wx.MessageBox("裁剪区域已保存并覆盖原图。", "保存成功", wx.OK | wx.ICON_INFORMATION)
+        try:
+            if not self.crops:
+                return
+            x, y, w, h = self.crops[self.selected_crop_idx]
+            cropped = self.orig_image[y:y + h, x:x + w]
+
+            # 检查裁剪后的图像是否为空
+            if cropped is None or cropped.size == 0:
+                wx.MessageBox("裁剪后的图像为空，无法保存。", "错误", wx.OK | wx.ICON_ERROR)
+                return
+
+            # 检查文件路径是否有效
+            if not self.image_path:
+                wx.MessageBox("图像路径无效，无法保存。", "错误", wx.OK | wx.ICON_ERROR)
+                return
+
+            # 检查文件权限
+            try:
+                with open(self.image_path, 'a'):
+                    pass
+            except Exception as e:
+                wx.MessageBox(f"无法访问文件，可能是权限不足或文件被占用: {str(e)}", "错误", wx.OK | wx.ICON_ERROR)
+                return
+
+            # 保存图像
+            # success = cv2.imwrite(self.image_path, cropped)
+            # 处理中文路径保存问题
+            success =save_image_with_chinese_path(self.image_path, cropped)
+
+            if success:
+                wx.MessageBox("裁剪区域已保存并覆盖原图。", "保存成功", wx.OK | wx.ICON_INFORMATION)
+            else:
+                # 如果保存失败，显示包含路径和图像形状的错误信息
+                logger.error(f"保存失败，路径: {self.image_path}, 图像形状: {cropped.shape}")
+                wx.MessageBox(f"保存失败，路径: {self.image_path}, 图像形状: {cropped.shape}", "错误", wx.OK | wx.ICON_ERROR)
+        except Exception as e:
+            logger.error(f"保存失败: {str(e)}")
+            wx.MessageBox(f"保存失败: {str(e)}", "错误", wx.OK | wx.ICON_ERROR)
 
     def on_save_as(self, event):
         # Check if there are detected crop areas
@@ -225,7 +288,8 @@ class IDCardCropApp(wx.Frame):
                     save_path += '.png'
 
             # Use OpenCV's imwrite function to save the cropped image to the specified path
-            success = cv2.imwrite(save_path, cropped)
+            success =save_image_with_chinese_path(save_path, cropped)
+            # success = cv2.imwrite(save_path, cropped)
             if success:
                 # If the save is successful, show a message box indicating the save path
                 wx.MessageBox(f"已保存至：{save_path}", "保存成功", wx.OK | wx.ICON_INFORMATION)
