@@ -3,7 +3,7 @@ import cv2
 import wx
 import numpy as np
 from loguru import logger
-from utils import SCRFD,preprocess_image
+from card_correction_utils import card_correction
 import sys
  
 def get_model_path():
@@ -62,7 +62,7 @@ class IDCardCropApp(wx.Frame):
         onnxmodel = get_model_path()
         # 加载 ONNX 模型
         # 创建 SCRFD 类的实例，传入 ONNX 模型路径、置信度阈值和 NMS 阈值
-        self.card_net = SCRFD(onnxmodel)
+        self.card_net = card_correction(onnxmodel)
 
         self.orig_image = None
         self.image_path = None
@@ -140,50 +140,10 @@ class IDCardCropApp(wx.Frame):
 
     def detect_and_show_crops(self):
         image = self.orig_image.copy()
-        # gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        # blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-        # edged = cv2.Canny(blurred, 50, 150)
-        # 1. 图像预处理
-        _, blurred = preprocess_image(image)
-        if blurred is None:
-            logger.error("图像预处理失败，无法进行后续操作")
-            wx.MessageBox("图像预处理失败。", "错误", wx.OK | wx.ICON_ERROR)
-            return None
-
-        # # 2. 边缘检测
-
-        # edged = cv2.Canny(blurred, 50, 150)
-
-        # # 3. 轮廓检测与筛选
-        # contours, _ = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        # self.crops = []
-
-        # for cnt in contours:
-        #     approx = cv2.approxPolyDP(cnt, 0.02 * cv2.arcLength(cnt, True), True)
-        #     if len(approx) == 4 and cv2.contourArea(cnt) > 5000:
-        #         x, y, w, h = cv2.boundingRect(cnt)
-        #         self.crops.append((x, y, w, h))
         
-        # 调用 SCRFD 实例的 detect 方法对读取的图像进行目标检测
-        outimg, corner_points_list = self.card_net.detect(image)
-        self.crops = []
-        # 遍历检测到的目标的四个角点坐标
-        print(f"图像 {self.image_path} 的检测到{len(corner_points_list)}个目标,四个角点坐标分别为: {corner_points_list}")
-        for corner_points in corner_points_list:
-            # 提取 xmin, ymin, xmax, ymax
-            xmin = min([point[0] for point in corner_points])
-            ymin = min([point[1] for point in corner_points])
-            xmax = max([point[0] for point in corner_points])
-            ymax = max([point[1] for point in corner_points])
-
-            # 计算宽度和高度
-            w = xmax - xmin
-            h = ymax - ymin
-
-            # 将 (x, y, w, h) 添加到 self.crops
-            self.crops.append((xmin, ymin, w, h))
-
-            print(f"图像 {self.image_path} 的检测目标四个角点坐标: {corner_points}")
+        # 调用 大模型 对读取的图像进行目标检测，返回提取好的图片
+        outimg = self.card_net.infer(image)
+        
 
 
         if self.crops:
