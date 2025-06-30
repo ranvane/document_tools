@@ -49,8 +49,9 @@ class card_correction:
         
         # 调用 postprocess 方法对模型的原始输出进行后处理，得到最终的结果
         out = self.postprocess(pre_out)
-        # 尝试将后处理结果的颜色空间从 BGR 转换为 RGB，此处可能存在类型错误
-        out = cv2.cvtColor(out, cv2.COLOR_BGR2RGB)
+        # # 遍历处理后的图像列表，将颜色空间从 BGR 转换为 RGB
+        # for i in range(len(out['OUTPUT_IMGS'])):
+        #     out['OUTPUT_IMGS'][i] = cv2.cvtColor(out['OUTPUT_IMGS'][i], cv2.COLOR_BGR2RGB)
         # 返回最终处理后的结果
         return out
 
@@ -390,6 +391,11 @@ if __name__ == "__main__":
     srcimg = cv2.imdecode(img_bytes, cv2.IMREAD_COLOR)
     
     out = mynet.infer(srcimg)
+    # # 假设只显示处理后的第一张图像
+    if out['OUTPUT_IMGS']:
+        processed_img = out['OUTPUT_IMGS'][0]
+        processed_img_rgb = cv2.cvtColor(processed_img, cv2.COLOR_BGR2RGB)
+
 
     # 将 BGR 格式转换为 RGB 格式
     # srcimg_rgb = cv2.cvtColor(srcimg, cv2.COLOR_BGR2RGB)

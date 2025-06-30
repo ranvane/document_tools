@@ -20,6 +20,8 @@ def save_image_with_chinese_path(image_path, cropped):
     try:
         # 获取文件扩展名
         file_extension = os.path.splitext(image_path)[1].lower()
+        #imencode默认期望输入的图像是 BGR 格式
+        cropped = cv2.cvtColor(cropped, cv2.COLOR_RGB2BGR)
         if file_extension == '.jpg':
             _, buffer = cv2.imencode('.jpg', cropped)
         elif file_extension == '.png':
@@ -66,8 +68,9 @@ class IDCardCropApp(wx.Frame):
 
         self.orig_image = None
         self.image_path = None
-        self.crops = []
-        self.selected_crop_idx = 0
+        self.card_img=None
+        self.crops=[]
+        self.selected_crop_idx=0
 
         # 布局
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -78,7 +81,7 @@ class IDCardCropApp(wx.Frame):
         btn_sizer.Add(self.saveas_btn, 0, wx.ALL, 5)
 
         main_sizer = wx.BoxSizer(wx.VERTICAL)
-        main_sizer.Add(self.image_ctrl, 1, wx.EXPAND | wx.ALL, 10)
+        main_sizer.Add(self.image_ctrl, proportion=1, flag=wx.EXPAND | wx.ALL, border=10)
         main_sizer.Add(btn_sizer, 0, wx.ALIGN_CENTER | wx.BOTTOM, 10)
         self.panel.SetSizer(main_sizer)
 
@@ -121,6 +124,10 @@ class IDCardCropApp(wx.Frame):
     def load_image(self, path):
         """加载并显示图像文件"""
         self.image_path = path  # 保存图像路径
+        # 重置相关状态
+        self.crops = []
+        self.selected_crop_idx = 0
+        self.card_img = None
         try:
             # 使用numpy的fromfile配合imdecode解决中文路径问题
             img_array = np.fromfile(path, dtype=np.uint8)
@@ -142,13 +149,15 @@ class IDCardCropApp(wx.Frame):
         image = self.orig_image.copy()
         
         # 调用 大模型 对读取的图像进行目标检测，返回提取好的图片
-        outimg = self.card_net.infer(image)
+        out= self.card_net.infer(image)
+        processed_img_rgb=None
+        # 假设只显示处理后的第一张图像
+        for _out in out['OUTPUT_IMGS']:
+            _out_rgb = cv2.cvtColor(_out, cv2.COLOR_BGR2RGB)
+            self.crops.append(_out_rgb)
         
-
-
-        if outimg:
-
-            self.show_crop(outimg)
+        if self.crops:
+            self.show_crop()
             self.prev_btn.Enable()
             self.next_btn.Enable()
         else:
@@ -158,15 +167,36 @@ class IDCardCropApp(wx.Frame):
             self.prev_btn.Disable()
             self.next_btn.Disable()
 
-    def show_crop(self,outimg):
-        # 获取输出图像的高度和宽度
-        h, w = outimg.shape[:-1]
-        # 调整输出图像的大小，使其适应窗口宽度
-        outimg = cv2.resize(outimg, (800, int(800 * h / w)))
+    def show_crop(self):
+        self.card_img=self.crops[self.selected_crop_idx]
+        # 获取输出图像的原始高度和宽度
+        orig_h, orig_w = self.card_img.shape[:-1]
+        print("输出图像尺寸:", self.card_img.shape)
+
+        # 设定最大显示尺寸
+        max_width = 800
+        max_height = 600
+
+        # 计算缩放比例
+        width_ratio = max_width / orig_w
+        height_ratio = max_height / orig_h
+        scale_ratio = min(width_ratio, height_ratio)
+
+        # 计算调整后的尺寸
+        new_w = int(orig_w * scale_ratio)
+        new_h = int(orig_h * scale_ratio)
+
+        # 调整图像大小
+        resized_img = cv2.resize(self.card_img, (new_w, new_h))
+
         # 使用 wxPython 的 Image 类创建一个图像对象，传入图像的宽度、高度和字节数据
-        image = wx.Image(w, h, outimg.tobytes())
-        # 将 wx.Image 对象转换为 wx.Bitmap 对象，并设置到静态位图控件上显示
-        self.image_ctrl.SetBitmap(wx.Bitmap(image))
+        image = wx.Image(new_w, new_h, resized_img.tobytes())
+        # 将 wx.Image 对象转换为 wx.Bitmap 对象
+        bitmap = wx.Bitmap(image)
+        # 设置 Bitmap 到静态位图控件
+        self.image_ctrl.SetBitmap(bitmap)
+        # 根据图像尺寸调整 self.image_ctrl 的大小
+        self.image_ctrl.SetSize((new_w, new_h))
         # 重新布局面板，确保界面元素正确显示
         self.panel.Layout()
         # 更新窗口标题，显示当前选中的裁剪区域序号和总裁剪区域数量
@@ -186,8 +216,8 @@ class IDCardCropApp(wx.Frame):
         try:
             if not self.crops:
                 return
-            x, y, w, h = self.crops[self.selected_crop_idx]
-            cropped = self.orig_image[y:y + h, x:x + w]
+            cropped = self.crops[self.selected_crop_idx]
+
 
             # 检查裁剪后的图像是否为空
             if cropped is None or cropped.size == 0:
@@ -210,7 +240,7 @@ class IDCardCropApp(wx.Frame):
             # 保存图像
             # success = cv2.imwrite(self.image_path, cropped)
             # 处理中文路径保存问题
-            success =save_image_with_chinese_path(self.image_path, cropped)
+            success = save_image_with_chinese_path(self.image_path, cropped)
 
             if success:
                 wx.MessageBox("裁剪区域已保存并覆盖原图。", "保存成功", wx.OK | wx.ICON_INFORMATION)
@@ -223,39 +253,44 @@ class IDCardCropApp(wx.Frame):
             wx.MessageBox(f"保存失败: {str(e)}", "错误", wx.OK | wx.ICON_ERROR)
 
     def on_save_as(self, event):
-        # Check if there are detected crop areas
-        if not self.crops:
-            return
-        # Get the coordinates and dimensions of the currently selected crop area
-        x, y, w, h = self.crops[self.selected_crop_idx]
-        # Crop the corresponding area from the original image
-        cropped = self.orig_image[y:y + h, x:x + w]
+        # 复制裁剪后的图像，避免修改原始图像数据
+        cropped = self.card_img.copy()
 
-        # Open a file save dialog for the user to choose the save path and file format
-        with wx.FileDialog(self, "另存为", wildcard="JPEG files (*.jpg)|*.jpg|PNG files (*.png)|*.png",
+        # 获取输入文件所在的文件夹路径
+        if self.image_path:
+            default_dir = os.path.dirname(self.image_path)
+        else:
+            default_dir = ""
+
+        # 打开文件保存对话框，让用户选择保存路径和文件格式
+        # 支持 JPEG 和 PNG 两种文件格式
+        with wx.FileDialog(self, "另存为", defaultDir=default_dir, wildcard="JPEG files (*.jpg)|*.jpg|PNG files (*.png)|*.png",
                            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
-            # Show the file dialog; if the user clicks Cancel, return
+            # 显示文件对话框，如果用户点击取消按钮，则直接返回
             if fileDialog.ShowModal() == wx.ID_CANCEL:
                 return
-            # Get the save path selected by the user
+            # 获取用户选择的保存路径
             save_path = fileDialog.GetPath()
-            # Get the selected wildcard index to determine the file type
+            # 获取用户选择的通配符索引，用于确定文件类型
             wildcard_index = fileDialog.GetFilterIndex()
-            if wildcard_index == 0:  # JPEG files
+            # 根据通配符索引判断文件类型
+            if wildcard_index == 0:  # JPEG 文件
+                # 若保存路径不以 .jpg 结尾，则自动添加 .jpg 扩展名
                 if not save_path.lower().endswith('.jpg'):
                     save_path += '.jpg'
-            elif wildcard_index == 1:  # PNG files
+            elif wildcard_index == 1:  # PNG 文件
+                # 若保存路径不以 .png 结尾，则自动添加 .png 扩展名
                 if not save_path.lower().endswith('.png'):
                     save_path += '.png'
 
-            # Use OpenCV's imwrite function to save the cropped image to the specified path
-            success =save_image_with_chinese_path(save_path, cropped)
-            # success = cv2.imwrite(save_path, cropped)
+            # 调用自定义函数将裁剪后的图像保存到指定路径
+            # 该函数支持中文路径的保存操作
+            success = save_image_with_chinese_path(save_path, cropped)
             if success:
-                # If the save is successful, show a message box indicating the save path
+                # 若保存成功，弹出消息框显示保存路径
                 wx.MessageBox(f"已保存至：{save_path}", "保存成功", wx.OK | wx.ICON_INFORMATION)
             else:
-                # If the save fails, show a message box indicating the failure
+                # 若保存失败，弹出消息框提示保存失败
                 wx.MessageBox("保存失败。", "错误", wx.OK | wx.ICON_ERROR)
 
 
