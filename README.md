@@ -4,11 +4,11 @@
 
 ## 功能介绍
 
-### 1. 文档裁剪 (`document_cropper.py`)
+### 1. 证件裁剪 (`document_card_cropper`)
 - **功能**: 自动识别并裁剪文件中的证件，去除空白边距。
 - **使用方法**:
   ```bash
-  python document_cropper.py 
+  python document_card_cropper
   ```
 
 
@@ -29,7 +29,7 @@ pip install -r requirements.txt
 
 
 ## 使用
-1.  `document_cropper.py` 对包含证件的图片进行裁剪，提取证件。
+1.  `document_card_cropper` 对包含证件的图片进行裁剪，提取证件。
 2.  `document_image_merger.py`将裁剪后的图像重新合并到A4纸上。
 
 
@@ -38,16 +38,16 @@ pip install -r requirements.txt
 ```bash
 pip install pyinstaller
 
-pyinstaller -F -w   document_cropper.py
+pyinstaller -F -w   document_card_cropper.py
 pyinstaller -F -w -i document_merger_icon.ico document_image_merger.py
 pyinstaller -F -w -i imageMergerDoc_icon.ico imageMergerDoc.py
 
 #windows下打包, 执行会报错, 解决办法:
 pyinstaller -F -w -i imageMergerDoc_icon.ico --hidden-import=docx imageMergerDoc.py
 
-pyinstaller -F -w  --add-data "models/carddetection_scrf.onnx;." document_cropper.py
+pyinstaller -F -w  --add-data "models/card_correction.onnx;." document_card_cropper
 ```
-
+---
 
 ## 版本信息
 - Python版本要求: 3.x
@@ -58,4 +58,3 @@ MIT License
 
 ---
 
-以上是基于提供的代码生成的README.md内容，如有需要可进一步扩展说明。
