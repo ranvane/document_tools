@@ -9,10 +9,10 @@ import sys
 def get_model_path():
     if hasattr(sys, '_MEIPASS'):
         # 如果程序是打包后的状态
-        return os.path.join(sys._MEIPASS, os.path.join('models', 'carddetection_scrf.onnx'))
+        return os.path.join(sys._MEIPASS, os.path.join('models', 'card_correction.onnx'))
     else:
         # 如果是开发状态
-        return os.path.join('models', 'carddetection_scrf.onnx')
+        return os.path.join('models', 'card_correction.onnx')
 
 # 提取保存图像的逻辑为独立函数
 def save_image_with_chinese_path(image_path, cropped):
@@ -146,13 +146,11 @@ class IDCardCropApp(wx.Frame):
         
 
 
-        if self.crops:
-            print(self.crops)
-            self.selected_crop_idx = 0
-            self.show_crop()
-            if len(self.crops) > 1:
-                self.prev_btn.Enable()
-                self.next_btn.Enable()
+        if outimg:
+
+            self.show_crop(outimg)
+            self.prev_btn.Enable()
+            self.next_btn.Enable()
         else:
             wx.MessageBox("未检测到矩形证件区域。", "提示", wx.OK | wx.ICON_INFORMATION)
             self.crop_btn.Disable()
@@ -160,15 +158,18 @@ class IDCardCropApp(wx.Frame):
             self.prev_btn.Disable()
             self.next_btn.Disable()
 
-    def show_crop(self):
-        x, y, w, h = self.crops[self.selected_crop_idx]
-        cropped = self.orig_image[y:y + h, x:x + w]
-        resized = cv2.resize(cropped, (800, 500))
-        rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
-        h, w = rgb.shape[:2]
-        image = wx.Image(w, h, rgb.tobytes())
+    def show_crop(self,outimg):
+        # 获取输出图像的高度和宽度
+        h, w = outimg.shape[:-1]
+        # 调整输出图像的大小，使其适应窗口宽度
+        outimg = cv2.resize(outimg, (800, int(800 * h / w)))
+        # 使用 wxPython 的 Image 类创建一个图像对象，传入图像的宽度、高度和字节数据
+        image = wx.Image(w, h, outimg.tobytes())
+        # 将 wx.Image 对象转换为 wx.Bitmap 对象，并设置到静态位图控件上显示
         self.image_ctrl.SetBitmap(wx.Bitmap(image))
+        # 重新布局面板，确保界面元素正确显示
         self.panel.Layout()
+        # 更新窗口标题，显示当前选中的裁剪区域序号和总裁剪区域数量
         self.SetTitle(f"证件裁剪器 - 当前区域 {self.selected_crop_idx + 1} / {len(self.crops)}")
 
     def on_prev(self, event):
