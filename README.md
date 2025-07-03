@@ -48,12 +48,30 @@ pyinstaller -F -w -i imageMergerDoc_icon.ico --hidden-import=docx imageMergerDoc
 
 #windows下打包
 pyinstaller -F -w  --icon=document_card_cropper.ico --add-data "models/card_correction.onnx;models"  document_card_cropper.py
+
+#Linux下打包
+pyinstaller -F -w  --icon=document_card_cropper.ico --add-data "models/card_correction.onnx:models"  document_card_cropper.py
+783MB
+
+还需测试：
+Ubuntu 下测试：
+nuitka --onefile \
+  --windows-disable-console \
+  --windows-icon-from-ico=document_card_cropper.ico \
+  --include-data-dir=models=./models \
+  document_card_cropper.py --output-dir=nuitka_out
+document_card_cropper.bin 文件96.1MB，需要将models文件夹复制到可执行文件相同目录。
+
+
+nuitka document_card_cropper.py   --mingw64  --standalone  --onefile  --show-progress  --windows-console-mode=disable  --include-module=wx._xml  --include-data-files=document_card_cropper.png=.  --include-data-files=document_card_cropper.ico=.  --include-data-dir=models=models  --output-dir=nuitka_out
+
+document_card_cropper.bin 文件96.1MB，需要将models文件夹复制到可执行文件相同目录。
 ```
 ---
 
 ## 版本信息
 - Python版本要求: 3.x
-- 测试环境: Windows/Linux/macOS
+- 测试环境: Windows/Linux
 
 ## 开源许可
 MIT License
