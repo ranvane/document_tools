@@ -181,3 +181,6 @@ dist/
 *.spec
 
 *.svg
+nuitka_out/
+nuitka_out
+out
