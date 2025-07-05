@@ -184,3 +184,4 @@ dist/
 nuitka_out/
 nuitka_out
 out
+!/.venv/
