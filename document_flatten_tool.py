@@ -60,7 +60,7 @@ class MyFileDropTarget(wx.FileDropTarget):
 
 class document_Flatten_Tool(wx.Frame):
     def __init__(self):
-        super().__init__(None, title="文档展平、漂白", size=(1000, 800))
+        super().__init__(None, title="图像展平、去模糊、去阴影", size=(1000, 800))
         self.panel = wx.Panel(self)
         self.image_ctrl = wx.StaticBitmap(self.panel)
         self.select_btn = wx.Button(self.panel, label="选择图片")
