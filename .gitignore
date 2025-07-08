@@ -182,6 +182,7 @@ dist/
 
 *.svg
 nuitka_out/
-nuitka_out
+nuitka_out/*
 out
 !/.venv/
+nuitka-crash-report.xml
