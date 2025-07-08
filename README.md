@@ -118,12 +118,10 @@ nuitka --onefile   --windows-disable-console   --windows-icon-from-ico=document_
 nuitka document_card_cropper.py   --jobs=0   --mingw64   --standalone   --onefile   --show-progress   --windows-console-mode=disable   --include-module=wx._xml   --include-data-files=document_card_cropper.png=.   --include-data-files=document_card_cropper.ico=.   --include-data-dir=models=models   --output-dir=nuitka_out
 ```
 
-### ⏱️ 编译时间对比（i7-CPU 示例）：
+---
+## Windows 10 64位系统下打包好的文件:
 
-| 参数 | real | user | sys |
-|------|------|------|-----|
-| `--jobs=0` | 3m47s | 11m13s | 23s |
-| 默认并发 | 3m54s | 11m41s | 25s |
+https://cloud.189.cn/t/URZJBnvq6Vz2（访问码：ox1j）
 
 ---
 
