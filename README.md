@@ -135,7 +135,7 @@ nuitka document_card_cropper.py   --jobs=0   --mingw64   --standalone   --onefil
 ---
 
 ## 感谢 
-本项目直接使用了一下项目的源代码和模型文件：
+本项目直接使用了下面项目的源代码和模型文件：
 - [document-undistort-onnxrun](https://github.com/hpc203/document-undistort-onnxrun)
 - [DocUnwrap](https://www.modelscope.cn/studios/jockerK/DocUnwrap/files)
 - [cv_resnet_carddetection_scrfd34gkps-opencv-dnn](https://github.com/hpc203/cv_resnet_carddetection_scrfd34gkps-opencv-dnn)
