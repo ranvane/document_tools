@@ -4,4 +4,5 @@ numpy  # 数值计算
 Pillow  # 图像处理
 loguru         # 日志记录
 python-docx
+onnxruntime
 

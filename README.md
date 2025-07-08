@@ -1,7 +1,7 @@
 
 # 📄 文档处理工具包
 
-本项目包含两个实用的文档图像处理脚本，支持证件自动裁剪与多图合并功能，适用于文档归档、打印整理等场景。
+本项目包含四个实用的文档图像处理脚本，支持证件自动裁剪与多图合并功能，适用于文档归档、打印整理等场景。
 
 ---
 
@@ -23,6 +23,21 @@
   ```bash
   python document_image_merger.py
   ```
+### 3. `document_flatten_tool.py` – 图像展平、去模糊、去阴影工具
+- **功能**：展平图像，去除模糊和阴影，提升文档阅读效果。
+- **支持格式**：PNG、JPG/JPEG
+- **使用方法**：
+  ```bash
+  python document_flatten_tool.py
+  ```
+- **注意**：该工具依赖于训练好的模型。
+### 4. `imageMergerDoc.py` – 将图像合并工具生成的图片生成为word文档，以便打印。
+- **功能**：将图像合并工具生成的图片生成为word文档，以便打印。
+- **使用方法**：
+  ```bash
+  python imageMergerDoc.py
+  ```
+
 
 ---
 
@@ -40,6 +55,8 @@ pip install -r requirements.txt
 
 1. 使用 `document_card_cropper.py` 处理包含证件的图片，自动裁剪出证件区域。
 2. 使用 `document_image_merger.py` 将裁剪后的图像合并排版成标准 A4 页面。
+3. 使用 `document_flatten_tool.py` 展平图像并去除模糊和阴影。
+4. 使用 `imageMergerDoc.py` 将图像合并工具生成的图片生成为word文档，以便打印。
 
 ---
 
@@ -62,7 +79,7 @@ pyinstaller -F -w document_card_cropper.py
 pyinstaller -F -w -i document_merger_icon.ico document_image_merger.py
 pyinstaller -F -w -i imageMergerDoc_icon.ico imageMergerDoc.py
 ```
-
+# document_card_cropper、document_flatten_tool打包
 #### ⚠️ Windows 特殊处理：
 ```bash
 # 避免 docx 导入错误
@@ -70,12 +87,16 @@ pyinstaller -F -w -i imageMergerDoc_icon.ico --hidden-import=docx imageMergerDoc
 
 # 包含模型文件（Windows 分号分隔）
 pyinstaller -F -w --icon=document_card_cropper.ico --add-data "models/card_correction.onnx;models" document_card_cropper.py
+
+pyinstaller -F -w --icon=document_card_cropper.ico --add-data "models/drnet.onnx" --add-data "models/gcnet.onnx" --add-data "models/nafdpm.onnx" --add-data "models/unetcnn.onnx" --add-data "models/uvdoc.onnx"  document_flatten_tool.py
 ```
 
 #### ✅ Linux 下打包：
 ```bash
 # 注意：Linux 使用冒号分隔
 pyinstaller -F -w --icon=document_card_cropper.ico --add-data "models/card_correction.onnx:models" document_card_cropper.py
+
+pyinstaller -F -w --icon=document_merger_icon.ico --add-data "models/drnet.onnx:models" --add-data "models/gcnet.onnx:models" --add-data "models/nafdpm.onnx:models" --add-data "models/unetcnn.onnx:models" --add-data "models/uvdoc.onnx:models"  document_flatten_tool.py
 ```
 
 ---
@@ -113,6 +134,11 @@ nuitka document_card_cropper.py   --jobs=0   --mingw64   --standalone   --onefil
 
 ---
 
-## 📜 开源协议
+## 感谢 
+本项目直接使用了一下项目的源代码和模型文件：
+- [document-undistort-onnxrun](https://github.com/hpc203/document-undistort-onnxrun)
+- [DocUnwrap](https://www.modelscope.cn/studios/jockerK/DocUnwrap/files)
+- [cv_resnet_carddetection_scrfd34gkps-opencv-dnn](https://github.com/hpc203/cv_resnet_carddetection_scrfd34gkps-opencv-dnn)
+- [读光-票证检测矫正模型](https://modelscope.cn/models/iic/cv_resnet18_card_correction)
 
-本项目采用 [MIT License](https://opensource.org/licenses/MIT) 开源许可。
+
